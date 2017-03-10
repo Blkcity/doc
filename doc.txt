@@ -1,0 +1,381 @@
+1. 交叉编译环境搭建,下载交叉编译器
+
+将gcc-arm-none-eabi-5_4-2016q3-20160926-linux.tar.bz2.tar拷贝至/opt/，并运行：
+
+sudo tar xf gcc-arm-none-eabi-5_4-2016q3-20160926-linux.tar.bz2.tar
+
+2. 添加环境变量
+
+打开~/.bashrc或者/etc/profile，添加如下toolchain路径
+
+TOOLCHAN_PATH=/opt/gcc-arm-none-eabi-5_4-2016q3/bin
+PATH=${TOOLCHAN_PATH}:${PATH}
+export PATH
+
+保存退出，关闭shell重新打开即可
+
+3. 安装genromfs，运行如下命令
+
+sudo apt-get install genromfs
+
+4. 安装cmake,运行如下命令
+
+sudo apt-get install cmake
+
+5. 安装python-empy
+
+sudo apt-get install python-empy
+
+sudo apt-get install bison
+
+sudo apt-get install flex
+
+sudo apt-get install gperf
+
+sudo apt-get install gcc-multilib
+
+sudo apt-get install libc6-dev-i386
+
+sudo apt-get install python-argparse wget zip python-empy qtcreator cmake build-essential -y
+
+# simulation tools
+sudo apt-get install ant protobuf-compiler libeigen3-dev libopencv-dev openjdk-8-jdk openjdk-8-jre clang-3.5 lldb-3.5 -y
+
+sudo apt-get install python-serial openocd libncurses5-dev autoconf texinfo libftdi-dev libtool zlib1g-dev -y
+
+6. 安装git
+
+sudo apt-get install git-core
+
+7. 设置git账号,用户名及mail地址自定义
+
+git config --global user.name "xxx"
+
+git config --global user.email "xxx@xxx.com"
+
+8. 获取源码，在工作目录中执行如下命令：
+
+git clone git@192.168.0.75:/home/git/repositories/fmx10.git
+
+提示输入密码：fmadmin
+
+9. 编译，进入fmx10目录运行如下命令：
+
+make fmx10-v1_default
+
+编译通过即可开发
+
+10. 创建dev分支并切换到该分支
+
+git checkout -b dev
+
+11. 查看分支
+git branch
+
+12. 创建分支
+git branch dev
+
+13. 切换分支
+git checkout master
+
+14. 合并分支
+git merge dev
+
+15. 删除分支
+git branch -d dev
+
+16. 添加修改
+git add .
+
+17. 提交修改
+git commit -m ""
+
+18. 上传修改
+git push origin master
+
+19. 移除
+git remote rm origin
+
+20. 添加上传
+git remote add origin git@192.168.0.75:/home/git/repositories/fmx10.git
+
+21. 上传修改
+git push -u origin master
+
+
+//编译程序内存的分配
+
+1.栈区(stack)，由编译器自动分配，存放函数的参数值，局部变量。操作方式类似数据结构中的栈。
+
+2.堆区(heap)，由程序员分配释放，若程序员不释放，程序结束可由os回收。它与数据结构中的堆不同，分配方式类似于链表。即malloc和free操作
+
+3.全局区/静态区(static)，全局变量和静态变量是存放在一块的，初始化的全局变量和静态变量放在一个区域，未初始化的全局变量和未初始化的静态变量在相邻的另外区域。程序结束后有系统释放。
+
+4.字符常量区，字符串常量都存放在这里。程序结束后由系统释放。
+
+5.程序代码区，存放函数体的二进制代码。
+
+例子：
+
+int   a   =   0;					//全局初始化区
+char   *p1;   						//全局未初始化区
+main()    
+{    
+	int   b;   						//栈
+	char   s[]   =   "abc";   		//栈
+	char   *p2;   					//栈
+	char   *p3   =   "123456";   	//123456/0在常量区，p3在栈上
+	static   int   c   =0；   		//全局（静态）初始化区
+
+	p1   =   (char   *)malloc(10);
+	p2   =   (char   *)malloc(20);	//分配得来得10和20字节的区域在堆区
+
+	strcpy(p1,   "123456");   		//123456/0放在常量区，编译器可能会将它与p3所指向的"123456"，优化成一个地方
+}
+
+//堆和栈的理论知识
+
+1.申请方式
+
+stack:由系统自动分配.例如，声明在函数中一个局部变量int b;系统自动在栈中为b开辟空间
+
+heap:需要程序员自己申请，并指明大小，如在c中malloc函数，
+
+	p1 = (char *)malloc(10);
+
+	c++中的new函数
+	
+	p2 = new char[10];
+其中p1，p2本身在栈中，指针类型，存储的数据为申请内存的地址，申请的内存在堆中。
+
+注：在linux/win32/rtos的大多数平台都提供了类似的函数alloca，这个也可以动态分配栈内存
+
+2.申请后系统的响应
+
+stack：	只要栈的剩余空间大于所申请空间，系统将为程序提供内存，否则将报异常提示栈溢出
+
+heap：	首先应该知道操作系统有一个记录空闲内存地址的链表，当系统收到程序的申请时，
+		会遍历该链表，寻找第一个空间大于所申请空间的堆结点，然后将该结点从空闲结点链表  
+		中删除，并将该结点的空间分配给程序，另外，对于大多数系统，会在这块内存空间中的  
+		首地址处记录本次分配的大小，这样，代码中的delete语句才能正确的释放本内存空间。  
+		另外，由于找到的堆结点的大小不一定正好等于申请的大小，系统会自动的将多余的那部  
+		分重新放入空闲链表中。
+		
+另：
+	刚接触C编程时， 比较喜欢用局部变量， 因为局部变量是在栈上分配的，
+	会自动释放， 不会造成内存泄漏， 碎片什么的，觉得比malloc/new 出来的
+	堆内存好使多了，大家可能说malloc/new可以分配动态内存，其实linux/win32
+	的大多数平台提供了一个类似的函数alloca也可以来动态的分配栈内存。
+ 
+	栈变量正用得不亦乐乎的时候，悲剧发生了， 程序运行中老是出现莫名其妙的错误，
+	特别是Segmentation fault出现得尤其频繁。初步检查原因， 应该跟多线程有关，
+	最后总算查出了罪魁祸首：栈溢出!
+ 
+	程序的局部变量，用alloca分配的内存空间超出了栈空间的最大值，程序当然会死得很难看。
+	其实针对多线程程序来说，为了防止每个线程占用过多内存， 它们会被规定一个最大栈空间，
+	如果用户程序没有显式指定大小的话， 系统就会分配一个缺省值，这个值在不同的平台可能会
+	不一样，比如x86系统往往是10M, MIPS可能是8M, ARM一般是4M或者2M, 可以用ulimit命令查到。
+	但有一点需要注意，这个查到的栈空间是子线程的，主线程往往会比这个值大很多,
+	所以栈溢出一般都发生在子线程中。
+ 
+	由于有了栈溢出的风险， 所以大空间的局部变量，alloca的参数过大都是要避免的，
+	如果非得要用大内存，就请考虑堆空间吧！
+
+3.申请大小的限制
+
+	栈：在Windows下,栈是向低地址扩展的数据结构，是一块连续的内存的区域。这句话的意  
+	思是栈顶的地址和栈的最大容量是系统预先规定好的，在WINDOWS下，栈的大小是2M（也有  
+	的说是1M，总之是一个编译时就确定的常数），如果申请的空间超过栈的剩余空间时，将  
+	提示overflow。因此，能从栈获得的空间较小。    
+	
+	堆：堆是向高地址扩展的数据结构，是不连续的内存区域。这是由于系统是用链表来存储  
+	的空闲内存地址的，自然是不连续的，而链表的遍历方向是由低地址向高地址。堆的大小  
+	受限于计算机系统中有效的虚拟内存。由此可见，堆获得的空间比较灵活，也比较大。
+
+4.申请效率的比较
+	
+	栈由系统自动分配，速度较快。但程序员是无法控制的。
+	
+	堆是由new分配的内存，一般速度比较慢，而且容易产生内存碎片,不过用起来最方便.
+	另外，在WINDOWS下，最好的方式是用VirtualAlloc分配内存，他不是在堆，也不是在栈是
+	直接在进程的地址空间中保留一块内存，虽然用起来最不方便。但是速度快，也最灵活.
+
+5.堆和栈中的存储内容
+
+	栈：   在函数调用时，第一个进栈的是主函数中后的下一条指令（函数调用语句的下一条可  
+	执行语句）的地址，然后是函数的各个参数，在大多数的C编译器中，参数是由右往左入栈  
+	的，然后是函数中的局部变量。注意静态变量是不入栈的。    
+	当本次函数调用结束后，局部变量先出栈，然后是参数，最后栈顶指针指向最开始存的地  
+	址，也就是主函数中的下一条指令，程序由该点继续运行。    
+	
+	堆：一般是在堆的头部用一个字节存放堆的大小。堆中的具体内容由程序员安排。
+
+6.存取效率的比较
+
+	栈上的数组比指针所指向的字符串(例如堆)快
+	
+	比如：    
+  #include    
+  void   main()    
+  {    
+  char   a   =   1;    
+  char   c[]   =   "1234567890";    
+  char   *p   ="1234567890";    
+  a   =   c[1];    
+  a   =   p[1];    
+  return;    
+  }    
+  对应的汇编代码    
+  10:   a   =   c[1];    
+  00401067   8A   4D   F1   mov   cl,byte   ptr   [ebp-0Fh]    
+  0040106A   88   4D   FC   mov   byte   ptr   [ebp-4],cl    
+  11:   a   =   p[1];    
+  0040106D   8B   55   EC   mov   edx,dword   ptr   [ebp-14h]    
+  00401070   8A   42   01   mov   al,byte   ptr   [edx+1]    
+  00401073   88   45   FC   mov   byte   ptr   [ebp-4],al    
+  第一种在读取时直接就把字符串中的元素读到寄存器cl中，而第二种则要先把指针值读到  
+  edx中，再根据edx读取字符，显然慢了。
+  
+
+//软件目录结构介绍：
+
+|--—fmx10
+	|----cmake .....................................(编译脚本目录)
+    	 |----common 
+	 		  |----fmx10_base.cmake ................(定义编译脚本中基本的编译函数，编译选项的选择等)
+		 |----configs
+	  	 	  |----nuttx_fmx10-v1_default.cmake ....(自定义添加删除需要编译的模块，驱动等部分)
+		 |----nuttx
+			  |----fmx10_impl_nuttx.cmake ..........(编译脚本中一些函数的定义，例如生成romfs，生成最终firmware版本等)
+		 |----toolchains
+			  |----Toolchain-arm-none-eabi.cmake ...(初始化交叉编译器有关的全局变量)
+	|----CMakeList.txt .............................(cmake运行的第一个脚本)
+	|----Makefile ..................................(第一个编译脚本，make时运行，调用CMakeList.txt脚本)
+	|----msg .......................................(各模块间消息格式定义，每条消息会生成相应头文件，通过uORB模块发布订阅)
+	|----Nuttx .....................................(RTOS kernel)
+		 |----apps .................................(nuttx自带的内置app及例子，可通过修改编译宏定义选择添加编译)
+		 |----nuttx ................................(nuttx系统内核源码，外部设备驱动等)
+	|----nuttx-configs .............................(对于不同硬件平台对nuttx的编译宏定义初始设置，或者不同硬件版本的不同编译选项)
+	|----nuttx-patchs ..............................(对nuttx源码的补丁包，编译时会统一打补丁)
+	|----ROMFS .....................................(文件系统，启动脚本及各种初始化参数)
+	|----src .......................................(用户源码)
+		 |----driver ...............................(各外设驱动源码)
+		 |----examples .............................(例子)
+		 |----firmware .............................(固件生成)
+		 |----include ..............................(头文件)
+		 |----modules ..............................(功能模块源码)
+		 |----platforms ............................(与平台相关的头文件)
+	|----Tools .....................................(编译过程中用到的一些python脚本，解析文本生成c/cpp和h文件，msg和参数模块)
+	|----build_fmx10-v1_default ....................(编译后生成的目录，所有中间文件及最终生成的固件所在目录，make clean后删除)
+
+//系统各模块参数设置功能实现及软件架构
+
+	1. 各模块内在*params.c中定义要用的参数类型，名称，默认值；
+	
+	2. 编译时应用Tools中的python脚本将src/*params.c文件转换成parameters.xml；
+	
+	3. 脚本再根据parameters.xml自动生成可编译的fmx10_parameters.c/fmx10_parameters.h文件，两个文件定义了系统所有的参数；
+	
+	4. 在src/systemcmd/中是所有系统用到的内部工具，其中包括param，编译后param工具生成到系统中，可直接运行设置各种参数；
+	
+	5. 在ROMFS/init.d/中添加相应的初始化参数配置文件，系统启动时运行param将参数设置到系统中。
+	
+	
+	
+	
+//win10 bash ubuntu 搭建
+
+sudo lsb_release -a
+
+sudo apt-get install -f apt
+
+
+1. 确认你有一个64位架构的内核
+
+dpkg --print-architecture
+
+amd64
+
+2. 确认你打开了多架构支持功能
+
+dpkg --print-foreign-architectures
+
+i386
+
+3.如果空则需要打开多架构支持。
+
+sudo dpkg --add-architecture i386
+
+sudo apt-get update
+
+sudo apt-get dist-upgrade
+
+//ubuntu 64bit上编译arm-none-eabi-gcc
+
+sudo apt-get install apt-src scons mingw32-runtime p7zip-full gawk gzip perl autoconf m4 automake libtool libncurses5-dev gettext gperf dejagnu expect tcl autogen \
+guile-1.6 flex flip bison tofrodos texinfo g++ gcc-multilib libgmp3-dev libmpfr-dev debhelper texlive texlive-extra-utils
+
+1.tar xf prebuilt-native-tools.tar.lzma --lzma
+
+//删除工具中的gcc编译器，直接用系统自带的编译器编译
+2.cd prebuilt-native-tools
+
+3.rm -rf gcc
+
+//解压gcc源码
+tar -xjf gcc-arm-none-eabi-5_4-2016q3-20160926-src.tar.bz2
+cd ./gcc-arm-none-eabi-5_4-2016q3-20160926/src
+find -name '*.tar.*' | xargs -I% tar -xf %
+cd ../
+./build-prerequisites.sh --build_tools=YOUR_NATIVE_TOOLS_PATH
+./build-toolchain.sh --build_tools=YOUR_NATIVE_TOOLS_PATH --skip_steps=manual
+
+//./build-toolchain.sh --skip_mingw32 --skip_manual
+1.升级，bootloader
+
+2.线程优先级
+
+3.动态加载运行app
+
+
+sudo apt-get install sed bash dpkg-dev bison flex patch texinfo automake m4 libtool cvs websvn tar gzip bzip2 lzma libncurses5-dev bison flex texinfo automake libtool patch cvs cvsd gawk -y
+
+
+https://github.com/PX4-NuttX/nuttx.git
+
+https://github.com/PX4-NuttX/apps.git
+
+https://github.com/PX4-NuttX/NxWidgets.git
+
+//MPU
+
+mpu6500 start
+
+mpu6000 -s -T 20602 start
+
+//Baro
+
+ms5611 -s -T 5611 start
+
+spl06001 start
+
+//3-Axis Digital Compass
+
+hmc5883 -I -C -T start
+
+ist8310 -b 2 -C start
+
+//test
+
+fmx10_simple_app
+
+
+https://github.com/Blkcity/doc.git
+
+https://github.com/Blkcity/play.git
+
+https://github.com/Blkcity/bok.git
+
+https://github.com/Blkcity/pfdd.git
+
+https://github.com/Blkcity/mff.git
